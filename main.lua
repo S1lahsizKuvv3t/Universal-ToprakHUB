@@ -71,7 +71,7 @@ end
 totalShutdown()
 
 -- [2] DEĞİŞKENLER & RENK AYIRIMI
-local speedOn, jumpOn, espOn, aimbotOn, silentAimOn, tracerOn, rainbowOn, fullBrightOn,namesON = false, false, false, false, false, false, false, false, false
+local speedOn, jumpOn, espOn, aimbotOn, silentAimOn, tracerOn, rainbowOn, fullBrightOn, namesOn = false, false, false, false, false, false, false, false, false
 local spinOn, spinSpeed = false, 50
 local freeCamOn, freeCamSpeed = false, 2
 local camRotX, camRotY = 0, 0
@@ -88,6 +88,8 @@ _G.Names = _G.Names or {}
 local oldBrightness = Lighting.Brightness
 local oldClockTime = Lighting.ClockTime
 local oldGlobalShadows = Lighting.GlobalShadows
+local oldAmbient = Lighting.Ambient
+local oldOutdoorAmbient = Lighting.OutdoorAmbient
 
 -- [3] ÇIKIŞ YAPAN OYUNCUYU TEMİZLEME
 table.insert(_G.ToprakCons, Players.PlayerRemoving:Connect(function(p)
@@ -169,6 +171,7 @@ local MoveP = createTab("MOVEMENT", 1)
 local TeleP = createTab("TELEPORT", 2)
 local VisP = createTab("VISUALS", 3)
 local FunP = createTab("FUN", 4)
+local SettingsP = createTab("SETTINGS", 5)
 
 local function label(p, txt, y, sz)
     local l = Instance.new("TextLabel", p)
@@ -215,58 +218,50 @@ end
 
 -- [[ KESİN ÇÖZÜM: WELCOME SCREEN ANIMATION ]]
 local function playWelcomeAnimation()
-    -- Eski kalıntıları temizle (Eğer varsa)
     if ScreenGui:FindFirstChild("ToprakWelcome") then ScreenGui.ToprakWelcome:Destroy() end
 
-    -- Karşılama Çerçevesi (Main UI ile birebir aynı konum ve boyut)
     local WelcomeFrame = Instance.new("Frame", ScreenGui)
     WelcomeFrame.Name = "ToprakWelcome"
     WelcomeFrame.Size = UDim2.new(0, 520, 0, 420) 
     WelcomeFrame.Position = UDim2.new(0.5, -260, 0.5, -210) 
-    WelcomeFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15) -- Arkaplan rengi
+    WelcomeFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15) 
     WelcomeFrame.BorderSizePixel = 0
-    WelcomeFrame.ZIndex = 999 -- EN ÜST KATMAN (Diğer her şeyin üstünde)
+    WelcomeFrame.ZIndex = 999 
     
     local Corner = Instance.new("UICorner", WelcomeFrame)
     Corner.CornerRadius = UDim.new(0, 10)
 
-    -- "Welcome to ToprakHUB!" Yazısı
     local WelcomeText = Instance.new("TextLabel", WelcomeFrame)
     WelcomeText.Size = UDim2.new(1, 0, 1, 0) 
     WelcomeText.BackgroundTransparency = 1
     WelcomeText.Text = "Welcome to ToprakHUB!"
-    WelcomeText.Font = Enum.Font.GothamBold -- Fontu garantiye alalım
+    WelcomeText.Font = Enum.Font.GothamBold 
     WelcomeText.TextSize = 32
-    WelcomeText.TextColor3 = Color3.fromRGB(255, 0, 0) -- Direkt Kırmızı (themeColor yerine garanti)
-    WelcomeText.TextTransparency = 1 -- Başta görünmez
-    WelcomeText.ZIndex = 1000 -- Yazı çerçeveden de üstte olmalı
+    WelcomeText.TextColor3 = Color3.fromRGB(255, 0, 0) 
+    WelcomeText.TextTransparency = 1 
+    WelcomeText.ZIndex = 1000 
 
     local TS = game:GetService("TweenService")
     local info = TweenInfo.new(1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-    -- ASIL MENÜYÜ GİZLE (Animasyon bitene kadar)
     Main.Visible = false
 
-    -- ANIMASYON BAŞLIYOR
-    task.wait(0.2) -- Sistemin kendine gelmesi için çok kısa bir bekleme
+    task.wait(0.2) 
     
-    -- 1. Yazı yavaşça parlasın
     TS:Create(WelcomeText, info, {TextTransparency = 0}):Play()
     
-    task.wait(2.5) -- Kullanıcı mesajı okusun
+    task.wait(2.5) 
 
-    -- 2. Yazı ve Arkaplan yavaşça yok olsun
     TS:Create(WelcomeText, info, {TextTransparency = 1}):Play()
     local fadeOut = TS:Create(WelcomeFrame, info, {BackgroundTransparency = 1})
     fadeOut:Play()
 
     fadeOut.Completed:Connect(function()
-        WelcomeFrame:Destroy() -- Objeyi tamamen sil
-        Main.Visible = true -- Ana menüyü tak diye aç
+        WelcomeFrame:Destroy() 
+        Main.Visible = true 
     end)
 end
 
--- Scriptin sonunda veya UI oluştuktan hemen sonra çağır:
 task.spawn(playWelcomeAnimation)
 
 -- AIMBOT SAYFASI
@@ -286,9 +281,6 @@ local JumpIn = Instance.new("TextBox", MoveP)
 JumpIn.Size = UDim2.new(0.8,0,0,35); JumpIn.Position = UDim2.new(0.1,0,0,135)
 JumpIn.Text = "80"; JumpIn.BackgroundColor3 = Color3.fromRGB(35,35,35); JumpIn.TextColor3 = Color3.new(1,1,1)
 Instance.new("UICorner", JumpIn)
-
---SETTINGS SAYFASI--
-local SettingsP = createTab("SETTINGS", 5) -- 5. sıraya Settings eklendi
 
 -- TELEPORT SAYFASI
 label(TeleP, "IŞINLANMA & İZLEME", 5, 16)
@@ -321,7 +313,7 @@ Instance.new("UICorner", NearestTpBtn)
 local FreeCamStatus = label(TeleP, "FREECAM: KAPALI [é]", 180, 16)
 makeSlider(TeleP, "FREECAM HIZI", 210, 2, 10, function(v) freeCamSpeed = v end)
 
--- VISUALS SAYFASI (SLIDERLAR SADECE ESP'Yİ ETKİLER)
+-- VISUALS SAYFASI
 makeSlider(VisP, "ESP RENGİ (KIRMIZI)", 5, rV, 255, function(v) rV = v end)
 makeSlider(VisP, "ESP RENGİ (YEŞİL)", 45, gV, 255, function(v) gV = v end)
 makeSlider(VisP, "ESP RENGİ (MAVİ)", 85, bV, 255, function(v) bV = v end)
@@ -333,66 +325,31 @@ RainBtn.Text = "RAINBOW ESP: KAPALI"
 RainBtn.Font = "GothamBold"
 RainBtn.TextSize = 14
 RainBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-RainBtn.TextColor3 = Color3.new(1, 1, 1) -- Beyaz yazı
+RainBtn.TextColor3 = Color3.new(1, 1, 1)
 Instance.new("UICorner", RainBtn)
-
-RainBtn.MouseButton1Click:Connect(function()
-    rainbowOn = not rainbowOn -- Özelliği aç/kapat
-    -- Yazıyı ve Rengi Güncelle
-    RainBtn.Text = "RAINBOW ESP: " .. (rainbowOn and "AÇIK" or "KAPALI")
-    RainBtn.TextColor3 = rainbowOn and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
-end)
-
--- Tıklandığında renk değiştirmesini istiyorsan burayı da kullan:
-RainBtn.MouseButton1Click:Connect(function()
-    rainbowOn = not rainbowOn
-    RainBtn.Text = "RAINBOW ESP: "..(rainbowOn and "AÇIK" or "KAPALI")
-    -- Aktifken Yeşil, kapalıyken Beyaz kalır:
-    RainBtn.TextColor3 = rainbowOn and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
-end)
-
 
 local TraceBtn = Instance.new("TextButton", VisP)
 TraceBtn.Size = UDim2.new(0.8,0,0,30); TraceBtn.Position = UDim2.new(0.1,0,0,170)
-TraceBtn.Text = "ÇİZGİLER: KAPALI"; TraceBtn.Font = "GothamBold"; TraceBtn.BackgroundColor3 = Color3.fromRGB(35,35,35)
+TraceBtn.Text = "ÇİZGİLER: KAPALI"; TraceBtn.Font = "GothamBold"; TraceBtn.TextSize = 14; TraceBtn.BackgroundColor3 = Color3.fromRGB(35,35,35)
+TraceBtn.TextColor3 = Color3.new(1, 1, 1)
 Instance.new("UICorner", TraceBtn)
 
 local FBBtn = Instance.new("TextButton", VisP)
 FBBtn.Size = UDim2.new(0.8,0,0,30)
 FBBtn.Position = UDim2.new(0.1,0,0,205)
 FBBtn.Text = "FULLBRIGHT: KAPALI"
-FBBtn.TextColor3 = Color3.new(1, 1, 1) -- YAZIYI BEYAZ YAPAR
+FBBtn.TextColor3 = Color3.new(1, 1, 1) 
 FBBtn.Font = "GothamBold"
 FBBtn.TextSize = 14
-FBBtn.Font = "GothamBold"
 FBBtn.BackgroundColor3 = Color3.fromRGB(35,35,35)
 Instance.new("UICorner", FBBtn)
-
-FBBtn.MouseButton1Click:Connect(function() 
-    fullBrightOn = not fullBrightOn -- Özelliği aç/kapat
-    -- Yazıyı ve Rengi Güncelle
-    FBBtn.Text = "FULLBRIGHT: " .. (fullBrightOn and "AÇIK" or "KAPALI")
-    FBBtn.TextColor3 = fullBrightOn and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
-    
-    -- Işık Ayarlarını Uygula
-    if fullBrightOn then
-        Lighting.Brightness = 2
-        Lighting.ClockTime = 14
-        Lighting.GlobalShadows = false
-    else 
-        -- Eski haline döndür
-        Lighting.Brightness = oldBrightness
-        Lighting.ClockTime = oldClockTime
-        Lighting.GlobalShadows = oldGlobalShadows 
-    end
-end)
 
 local EspStatus = label(VisP, "ESP (V): KAPALI", 245, 14)
 EspStatus.TextColor3 = Color3.new(1,0,0)
 
 local NameBtn = Instance.new("TextButton", VisP)
 NameBtn.Size = UDim2.new(0.8, 0, 0, 30)
-NameBtn.Position = UDim2.new(0.1, 0, 0, 170)
+NameBtn.Position = UDim2.new(0.1, 0, 0, 280) -- Pozisyonu çakışmaları önlemek için düzenlendi
 NameBtn.Text = "NAMETAGS: KAPALI"
 NameBtn.Font = "GothamBold"
 NameBtn.TextSize = 14
@@ -400,24 +357,16 @@ NameBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 NameBtn.TextColor3 = Color3.new(1, 1, 1)
 Instance.new("UICorner", NameBtn)
 
-NameBtn.MouseButton1Click:Connect(function()
-    namesOn = not namesOn -- Özelliği aç/kapat
-    -- Yazıyı ve Rengi Güncelle
-    NameBtn.Text = "NAMETAGS: " .. (namesOn and "AÇIK" or "KAPALI")
-    NameBtn.TextColor3 = namesOn and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
-end)
-
 -- FUN SAYFASI
 local SpinBtn = Instance.new("TextButton", FunP)
 SpinBtn.Size = UDim2.new(0.8,0,0,40); SpinBtn.Position = UDim2.new(0.1,0,0,20)
-SpinBtn.Text = "SPINBOT: KAPALI"; SpinBtn.Font = "GothamBold"; SpinBtn.BackgroundColor3 = Color3.fromRGB(35,35,35); SpinBtn.TextColor3 = Color3.new(1,0,0)
+SpinBtn.Text = "SPINBOT: KAPALI"; SpinBtn.Font = "GothamBold"; SpinBtn.TextSize = 14; SpinBtn.BackgroundColor3 = Color3.fromRGB(35,35,35); SpinBtn.TextColor3 = Color3.new(1,0,0)
 Instance.new("UICorner", SpinBtn)
 makeSlider(FunP, "SPIN HIZI", 70, 50, 200, function(v) spinSpeed = v end)
 
--- YENİ: INFINITE YIELD BUTONU
 local IYBtn = Instance.new("TextButton", FunP)
 IYBtn.Size = UDim2.new(0.8,0,0,40); IYBtn.Position = UDim2.new(0.1,0,0,140)
-IYBtn.Text = "INFINITE YIELD AÇ"; IYBtn.Font = "GothamBold"; IYBtn.BackgroundColor3 = Color3.fromRGB(130,30,130); IYBtn.TextColor3 = Color3.new(1,1,1)
+IYBtn.Text = "INFINITE YIELD AÇ"; IYBtn.Font = "GothamBold"; IYBtn.TextSize = 14; IYBtn.BackgroundColor3 = Color3.fromRGB(130,30,130); IYBtn.TextColor3 = Color3.new(1,1,1)
 Instance.new("UICorner", IYBtn)
 
 -- [[ SETTINGS SAYFASI ]]
@@ -429,16 +378,14 @@ KillBtn.Position = UDim2.new(0.1, 0, 0, 50)
 KillBtn.Text = "STOP & KILL UI"
 KillBtn.Font = "GothamBold"
 KillBtn.TextSize = 16
-KillBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0) -- Koyu Kırmızı (Tehlikeli olduğu belli olsun)
+KillBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
 KillBtn.TextColor3 = Color3.new(1, 1, 1)
 Instance.new("UICorner", KillBtn)
 
--- Butona tıklandığında scripti tamamen kapat
 KillBtn.MouseButton1Click:Connect(function()
-    -- Hafif bir onay efekti (opsiyonel)
     KillBtn.Text = "SHUTTING DOWN..."
     task.wait(0.5)
-    totalShutdown() -- Zaten kodunda olan temizlik fonksiyonunu çağırır
+    totalShutdown() 
 end)
 
 label(SettingsP, "Kapatmak için Sağ Shift'i de kullanabilirsin.", 110, 11)
@@ -447,7 +394,7 @@ label(SettingsP, "Kapatmak için Sağ Shift'i de kullanabilirsin.", 110, 11)
 -- [6] RENDER & SPINBOT & FREECAM LOGIC
 table.insert(_G.ToprakCons, RS.RenderStepped:Connect(function()
     
-    -- SADECE ESP İÇİN RENK HESAPLAMASI
+    -- ESP RENK HESAPLAMASI
     local currentEspColor
     if rainbowOn then 
         currentEspColor = Color3.fromHSV(tick() * 0.2 % 1, 0.8, 1) 
@@ -455,20 +402,24 @@ table.insert(_G.ToprakCons, RS.RenderStepped:Connect(function()
         currentEspColor = Color3.fromRGB(rV, gV, bV) 
     end
     
-    -- Fullbright
-    if fullBrightOn then Lighting.Brightness = 2; Lighting.ClockTime = 14; Lighting.GlobalShadows = false end
+    -- Fullbright Zorlaması
+    if fullBrightOn then 
+        Lighting.Ambient = Color3.new(1, 1, 1)
+        Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 14
+        Lighting.GlobalShadows = false 
+    end
     
- -- [[ FOV ÇEMBERİ GÖRÜNÜRLÜK KONTROLÜ ]]
--- Sadece Aimbot veya Silent Aim açıkken çemberi göster
-if aimbotOn or silentAimOn then
-    FOVCircle.Visible = true
-    FOVCircle.Position = Vector2.new(mouse.X, mouse.Y + 36) -- Mouse'u takip et
-    FOVCircle.Radius = fovRadius -- Slider'dan gelen boyut
-    FOVCircle.Color = themeColor -- Senin o güzel kırmızı rengin
-else
-    -- İkisi de kapalıysa çemberi gizle
-    FOVCircle.Visible = false
-end
+    -- FOV ÇEMBERİ GÖRÜNÜRLÜK KONTROLÜ
+    if aimbotOn or silentAimOn then
+        FOVCircle.Visible = true
+        FOVCircle.Position = Vector2.new(mouse.X, mouse.Y + 36)
+        FOVCircle.Radius = fovRadius 
+        FOVCircle.Color = themeColor 
+    else
+        FOVCircle.Visible = false
+    end
 
     -- FREECAM HAREKET MANTIĞI
     if freeCamOn then
@@ -491,7 +442,7 @@ end
         player.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame * CFrame.Angles(0, math.rad(spinSpeed), 0)
     end
 
-    -- ESP & ÇİZGİLER (Artık currentEspColor kullanıyor)
+    -- ESP & ÇİZGİLER & İSİMLER
     for _, v in pairs(Players:GetPlayers()) do
         local char = v.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -502,31 +453,28 @@ end
                 h.FillColor = currentEspColor; h.OutlineColor = Color3.new(1,1,1); h.Enabled = true
             elseif h then h:Destroy() end
             
+            -- İSİM ETİKETLERİ MANTIĞI
             local nl = _G.Names[v.Name]
-            -- [[ İSİM ETİKETLERİ MANTIĞI ]]
-local nl = _G.Names[v.Name]
--- Hem ESP genel anahtarı hem de NameTags butonu AÇIK olmalı
-if espOn and namesOn then
-    if not nl then 
-        nl = Drawing.new("Text") 
-        nl.Size = 10
-        nl.Center = true
-        nl.Outline = true
-        _G.Names[v.Name] = nl 
-    end
-    local pos, on = camera:WorldToViewportPoint(hrp.Position + Vector3.new(0, 3.5, 0))
-    if on then 
-        nl.Position = Vector2.new(pos.X, pos.Y)
-        nl.Text = v.Name
-        nl.Color = currentEspColor
-        nl.Visible = true 
-    else 
-        nl.Visible = false 
-    end
-elseif nl then 
-    -- Eğer NameTags kapalıysa veya genel ESP kapalıysa yazıyı gizle
-    nl.Visible = false 
-end
+            if espOn and namesOn then
+                if not nl then 
+                    nl = Drawing.new("Text") 
+                    nl.Size = 10
+                    nl.Center = true
+                    nl.Outline = true
+                    _G.Names[v.Name] = nl 
+                end
+                local pos, on = camera:WorldToViewportPoint(hrp.Position + Vector3.new(0, 3.5, 0))
+                if on then 
+                    nl.Position = Vector2.new(pos.X, pos.Y)
+                    nl.Text = v.Name
+                    nl.Color = currentEspColor
+                    nl.Visible = true 
+                else 
+                    nl.Visible = false 
+                end
+            elseif nl then 
+                nl.Visible = false 
+            end
             
             local line = _G.Lines[v.Name]
             if tracerOn then
@@ -560,6 +508,41 @@ end
 end))
 
 -- [7] ACTIONS (BUTON TIKLAMALARI)
+
+-- VISUALS BUTONLARI
+RainBtn.MouseButton1Click:Connect(function()
+    rainbowOn = not rainbowOn
+    RainBtn.Text = "RAINBOW ESP: " .. (rainbowOn and "AÇIK" or "KAPALI")
+    RainBtn.TextColor3 = rainbowOn and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
+end)
+
+TraceBtn.MouseButton1Click:Connect(function() 
+    tracerOn = not tracerOn
+    TraceBtn.Text = "ÇİZGİLER: "..(tracerOn and "AÇIK" or "KAPALI") 
+    TraceBtn.TextColor3 = tracerOn and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
+end)
+
+FBBtn.MouseButton1Click:Connect(function() 
+    fullBrightOn = not fullBrightOn
+    FBBtn.Text = "FULLBRIGHT: " .. (fullBrightOn and "AÇIK" or "KAPALI")
+    FBBtn.TextColor3 = fullBrightOn and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
+    
+    if not fullBrightOn then 
+        Lighting.Ambient = oldAmbient
+        Lighting.OutdoorAmbient = oldOutdoorAmbient
+        Lighting.Brightness = oldBrightness
+        Lighting.ClockTime = oldClockTime
+        Lighting.GlobalShadows = oldGlobalShadows 
+    end
+end)
+
+NameBtn.MouseButton1Click:Connect(function()
+    namesOn = not namesOn
+    NameBtn.Text = "NAMETAGS: " .. (namesOn and "AÇIK" or "KAPALI")
+    NameBtn.TextColor3 = namesOn and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
+end)
+
+-- FUN BUTONLARI
 IYBtn.MouseButton1Click:Connect(function()
     loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
 end)
@@ -570,22 +553,7 @@ SpinBtn.MouseButton1Click:Connect(function()
     SpinBtn.TextColor3 = spinOn and Color3.new(0,1,0) or Color3.new(1,0,0)
 end)
 
-RainBtn.MouseButton1Click:Connect(function() 
-    rainbowOn = not rainbowOn
-    RainBtn.Text = "RAINBOW ESP: "..(rainbowOn and "AÇIK" or "KAPALI") 
-end)
-
-TraceBtn.MouseButton1Click:Connect(function() 
-    tracerOn = not tracerOn
-    TraceBtn.Text = "ÇİZGİLER: "..(tracerOn and "AÇIK" or "KAPALI") 
-end)
-
-FBBtn.MouseButton1Click:Connect(function() 
-    fullBrightOn = not fullBrightOn; FBBtn.Text = "FULLBRIGHT: "..(fullBrightOn and "AÇIK" or "KAPALI")
-    if not fullBrightOn then Lighting.Brightness = oldBrightness; Lighting.ClockTime = oldClockTime; Lighting.GlobalShadows = oldGlobalShadows end
-end)
-
-
+-- TELEPORT BUTONLARI
 TpBtn.MouseButton1Click:Connect(function()
     if TargetBox.Text == "" then return end
     for _, v in pairs(Players:GetPlayers()) do
