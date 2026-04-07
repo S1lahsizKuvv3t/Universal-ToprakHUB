@@ -166,8 +166,46 @@ Main.Size = UDim2.new(0, 520, 0, 420)
 Main.Position = UDim2.new(0.5, -260, 0.5, -210)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 Main.Active = true
-Main.Draggable = true
 Main.ClipsDescendants = true 
+-- [[ ÖZEL SÜRÜKLEME (DRAG) SİSTEMİ ]]
+local dragging
+local dragInput
+local dragStart
+local startPos
+
+-- Sadece SideBar (sol menü) veya Main (ana arka plan) üzerinden tutunca çalışsın
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+Main.InputBegan:Connect(function(input)
+    -- Farenin sol tuşuna basıldığında
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = Main.Position
+        
+        -- Sürükleme başladığında diğer hareketleri dinle
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+table.insert(_G.ToprakCons, UIS.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end))
+
+table.insert(_G.ToprakCons, RS.RenderStepped:Connect(function()
+    if dragging and dragInput then
+        updateDrag(dragInput)
+    end
+end))
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
 
 local Stroke = Instance.new("UIStroke", Main)
@@ -271,9 +309,10 @@ local function createTab(tname, pos)
     p.Size = UDim2.new(1, 0, 1, 0)
     p.BackgroundTransparency = 1
     p.BorderSizePixel = 0
-    p.ScrollBarThickness = 4 -- Kaydırma çubuğunun kalınlığı (ince ve şık)
-    p.CanvasSize = UDim2.new(0, 0, 0, 700) -- İçeriğin aşağı doğru ne kadar uzayacağı
+    p.ScrollBarThickness = 4
+    p.CanvasSize = UDim2.new(0, 0, 0, 700)
     p.Visible = (pos == 0)
+    -- p.Active = true YOK, eğer varsa sil.
     
     btn.MouseButton1Click:Connect(function() 
         for _, v in pairs(Pages) do v.Visible = false end 
