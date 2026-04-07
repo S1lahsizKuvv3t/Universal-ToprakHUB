@@ -59,7 +59,7 @@ end
 totalShutdown()
 
 -- [2] DEĞİŞKENLER & RENK AYIRIMI
-local speedOn, jumpOn, espOn, aimbotOn, silentAimOn, tracerOn, rainbowOn, fullBrightOn, namesOn = false, false, false, false, false, false, false, false, false
+local speedOn, jumpOn, espOn, aimbotOn, tracerOn, rainbowOn, fullBrightOn, namesOn = false, false, false, false, false, false, false, false
 local spinOn, spinSpeed = false, 50
 local freeCamOn, freeCamSpeed = false, 2
 local camRotX, camRotY = 0, 0
@@ -87,7 +87,6 @@ local fileName = folderName .. "/settings.json"
 -- Tuş Atamalarını Tutan Tablo (Varsayılanlar)
 local Keybinds = {
     Aimbot = Enum.KeyCode.E,
-    SilentAim = Enum.KeyCode.R,
     Speed = Enum.KeyCode.Q,
     Jump = Enum.KeyCode.X,
     ESP = Enum.KeyCode.V,
@@ -224,6 +223,45 @@ Title.Font = "GothamBold"
 Title.TextSize = 22
 Title.BackgroundTransparency = 1
 Title.TextColor3 = themeColor
+-- [[ OYUNCU PROFİLİ (SOL ALT) ]]
+local ProfileFrame = Instance.new("Frame", SideBar)
+ProfileFrame.Size = UDim2.new(1, 0, 0, 50)
+ProfileFrame.Position = UDim2.new(0, 0, 1, -50) -- En alta hizalar
+ProfileFrame.BackgroundTransparency = 1
+
+-- Profil Resmi (Avatar)
+local AvatarImage = Instance.new("ImageLabel", ProfileFrame)
+AvatarImage.Size = UDim2.new(0, 30, 0, 30)
+AvatarImage.Position = UDim2.new(0, 10, 0.5, 0)
+AvatarImage.AnchorPoint = Vector2.new(0, 0.5)
+AvatarImage.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+Instance.new("UICorner", AvatarImage).CornerRadius = UDim.new(1, 0) -- Tam yuvarlak yapar
+
+-- Resmi Roblox'tan Çekme
+task.spawn(function()
+    local userId = player.UserId
+    local thumbType = Enum.ThumbnailType.HeadShot
+    local thumbSize = Enum.ThumbnailSize.Size420x420
+    local content, isReady = Players:GetUserThumbnailAsync(userId, thumbType, thumbSize)
+    if isReady then
+        AvatarImage.Image = content
+    end
+end)
+
+-- Oyuncu İsmi
+local UsernameLabel = Instance.new("TextLabel", ProfileFrame)
+UsernameLabel.Size = UDim2.new(1, -50, 1, 0)
+UsernameLabel.Position = UDim2.new(0, 45, 0, 0)
+UsernameLabel.BackgroundTransparency = 1
+UsernameLabel.Text = player.DisplayName -- Sadece kullanıcı adını istersen player.Name yapabilirsin
+UsernameLabel.Font = "GothamBold"
+UsernameLabel.TextSize = 12
+UsernameLabel.TextColor3 = themeColor
+UsernameLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Tema değiştiğinde ismin rengi de değişsin diye listeye ekliyoruz
+table.insert(_G.ThemeElements, UsernameLabel)
+
 
 local Container = Instance.new("Frame", Main)
 Container.Size = UDim2.new(1, -170, 1, -20)
@@ -427,7 +465,6 @@ task.spawn(playWelcomeAnimation)
 
 -- AIMBOT SAYFASI
 local AimStatus = label(AimP, "AIMBOT: KAPALI [E]", 10, 16)
-local SilentStatus = label(AimP, "SILENT AIM: KAPALI [R]", 40, 16)
 makeSlider(AimP, "FOV BOYUTU", 80, 120, 600, function(v) fovRadius = v end)
 
 -- MOVEMENT SAYFASI
@@ -684,6 +721,30 @@ makeSlider(SettingsP, "TEMA (MAVİ)", 465, themeB, 255, function(v)
     SaveConfig()
 end)
 
+-- [[ YAPIMCI BİLGİSİ & DISCORD ]]
+local CreditLabel = Instance.new("TextLabel", SettingsP)
+CreditLabel.Size = UDim2.new(1, 0, 0, 20)
+-- Y eksenini 520 yaparak slider'lardan sonraya hizalıyoruz
+CreditLabel.Position = UDim2.new(0, 0, 0, 520) 
+CreditLabel.BackgroundTransparency = 1
+CreditLabel.Text = "by Yiwit"
+CreditLabel.Font = "GothamBold"
+CreditLabel.TextSize = 14
+CreditLabel.TextColor3 = themeColor
+
+local DiscordLabel = Instance.new("TextLabel", SettingsP)
+DiscordLabel.Size = UDim2.new(1, 0, 0, 20)
+DiscordLabel.Position = UDim2.new(0, 0, 0, 540)
+DiscordLabel.BackgroundTransparency = 1
+DiscordLabel.Text = "discord for help: yasliplanet._."
+DiscordLabel.Font = "Gotham"
+DiscordLabel.TextSize = 12
+DiscordLabel.TextColor3 = themeColor
+
+-- Temayı değiştirdiğinde bu yazıların da rengi otomatik değişsin
+table.insert(_G.ThemeElements, CreditLabel)
+table.insert(_G.ThemeElements, DiscordLabel)
+
 -- [6] RENDER & SPINBOT & FREECAM LOGIC
 table.insert(_G.ToprakCons, RS.RenderStepped:Connect(function()
     
@@ -702,7 +763,7 @@ table.insert(_G.ToprakCons, RS.RenderStepped:Connect(function()
         Lighting.GlobalShadows = false 
     end
     
-    if aimbotOn or silentAimOn then
+    if aimbotOn then
         FOVCircle.Visible = true
         FOVCircle.Position = Vector2.new(mouse.X, mouse.Y + 36)
         FOVCircle.Radius = fovRadius 
@@ -930,9 +991,6 @@ table.insert(_G.ToprakCons, UIS.InputBegan:Connect(function(i, g)
     if i.KeyCode == Keybinds.Aimbot then 
         aimbotOn = not aimbotOn; AimStatus.Text = "AIMBOT: "..(aimbotOn and "AKTİF" or "KAPALI")
         AimStatus.TextColor3 = aimbotOn and Color3.new(0,1,0) or Color3.new(1,0,0)
-    elseif i.KeyCode == Keybinds.SilentAim then 
-        silentAimOn = not silentAimOn; SilentStatus.Text = "SILENT AIM: "..(silentAimOn and "AKTİF" or "KAPALI")
-        SilentStatus.TextColor3 = silentAimOn and Color3.new(0,1,0) or Color3.new(1,0,0)
     elseif i.KeyCode == Keybinds.Speed then 
         speedOn = not speedOn; SpeedStatus.Text = "HIZ: "..(speedOn and "AÇIK" or "KAPALI")
         SpeedStatus.TextColor3 = speedOn and Color3.new(0,1,0) or Color3.new(1,0,0)
