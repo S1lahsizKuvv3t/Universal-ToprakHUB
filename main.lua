@@ -1025,3 +1025,6 @@ table.insert(_G.ToprakCons, UIS.InputEnded:Connect(function(i)
 end))
 
 print("ToprakHUB Yüklendi! Kapanış İçin: Sağ Shift")
+
+
+
