@@ -118,6 +118,45 @@ local targetModes = {"Head", "Body", "Random"}
 local currentTargetIndex = 1
 local currentTargetPart = "Head"
 local currentRandomTarget = "Body"
+-- [[ BİLDİRİM SİSTEMİ (NOTIFICATIONS) ]]
+local function notify(title, text)
+    local NotifyFrame = Instance.new("Frame", ScreenGui)
+    NotifyFrame.Size = UDim2.new(0, 220, 0, 60)
+    NotifyFrame.Position = UDim2.new(1, 30, 1, -50) -- Ekranın dışından başlar (sağdan)
+    NotifyFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    NotifyFrame.BorderSizePixel = 0
+    NotifyFrame.ZIndex = 1000
+    Instance.new("UICorner", NotifyFrame).CornerRadius = UDim.new(0, 8)
+    
+    local grad = Instance.new("UIGradient", NotifyFrame)
+    grad.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, themeColor),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 15))
+    }
+    grad.Rotation = 45
+
+    local nTitle = Instance.new("TextLabel", NotifyFrame)
+    nTitle.Size = UDim2.new(1, -10, 0, 25); nTitle.Position = UDim2.new(0, 10, 0, 5)
+    nTitle.BackgroundTransparency = 1; nTitle.Text = title; nTitle.Font = "GothamBold"
+    nTitle.TextSize = 14; nTitle.TextColor3 = Color3.new(1, 1, 1); nTitle.TextXAlignment = "Left"
+
+    local nText = Instance.new("TextLabel", NotifyFrame)
+    nText.Size = UDim2.new(1, -10, 0, 20); nText.Position = UDim2.new(0, 10, 0, 30)
+    nText.BackgroundTransparency = 1; nText.Text = text; nText.Font = "Gotham"
+    nText.TextSize = 12; nText.TextColor3 = Color3.fromRGB(200, 200, 200); nText.TextXAlignment = "Left"
+
+    -- Animasyonlar (TweenService)
+    local TS = game:GetService("TweenService")
+    NotifyFrame:TweenPosition(UDim2.new(1, -230, 1, -50), "Out", "Quint", 0.5, true)
+    
+    task.wait(3) -- 3 saniye ekranda kalır
+    
+    local fadeOut = TS:Create(NotifyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(1, 30, 1, -50), BackgroundTransparency = 1})
+    TS:Create(nTitle, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+    TS:Create(nText, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+    fadeOut:Play()
+    fadeOut.Completed:Connect(function() NotifyFrame:Destroy() end)
+end
 
 local function SaveConfig()
     if not isfolder(folderName) then makefolder(folderName) end
@@ -175,6 +214,38 @@ _G.FOVCircle = FOVCircle
 -- [5] UI OLUŞTURMA
 local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
 ScreenGui.Name = name
+-- [[ WATERMARK (EKRANIN SAĞ ALT KÖŞESİ) ]]
+local WatermarkFrame = Instance.new("Frame", ScreenGui)
+WatermarkFrame.Size = UDim2.new(0, 200, 0, 25)
+WatermarkFrame.Position = UDim2.new(1, -10, 1, -10)
+WatermarkFrame.AnchorPoint = Vector2.new(1, 1)
+WatermarkFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+WatermarkFrame.BackgroundTransparency = 0.5
+WatermarkFrame.BorderSizePixel = 0
+Instance.new("UICorner", WatermarkFrame).CornerRadius = UDim.new(0, 5)
+
+local WatermarkText = Instance.new("TextLabel", WatermarkFrame)
+WatermarkText.Size = UDim2.new(1, 0, 1, 0)
+WatermarkText.BackgroundTransparency = 1
+WatermarkText.Font = "GothamBold"
+WatermarkText.TextSize = 12
+WatermarkText.TextColor3 = themeColor
+table.insert(_G.ThemeElements, WatermarkText)
+
+-- FPS ve Ping Güncelleme Döngüsü
+local lastTick = tick()
+local frames = 0
+table.insert(_G.ZewittCons, RS.RenderStepped:Connect(function()
+    frames = frames + 1
+    if tick() - lastTick >= 1 then
+        local fps = frames
+        local ping = math.floor(player:GetNetworkPing() * 1000)
+        WatermarkText.Text = "Zewitt | FPS: " .. fps .. " | Ping: " .. ping .. "ms"
+        frames = 0
+        lastTick = tick()
+    end
+end))
+
 
 local Main = Instance.new("Frame", ScreenGui)
 Main.Size = UDim2.new(0, 520, 0, 420)
@@ -218,6 +289,22 @@ local SideBar = Instance.new("Frame", Main)
 SideBar.Size = UDim2.new(0, 150, 1, 0)
 SideBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 Instance.new("UICorner", SideBar)
+-- ANA EKRAN İÇİN GRADIENT (Belirgin Mavili Geçiş)
+local MainGradient = Instance.new("UIGradient", Main)
+MainGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 50, 100)),   -- Sol üst: Canlı, derin Discord mavisi
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 25, 45)),  -- Orta: Yumuşak lacivert geçiş
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(12, 12, 16))     -- Sağ alt: Koyu siyah/gri zemin
+}
+MainGradient.Rotation = 45
+
+-- YAN MENÜ (SIDEBAR) İÇİN GRADIENT
+local SideGradient = Instance.new("UIGradient", SideBar)
+SideGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 65, 120)),   -- Yan menü için bir tık daha parlak mavi
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(18, 20, 30))
+}
+SideGradient.Rotation = 45
 
 local Title = Instance.new("TextLabel", SideBar)
 Title.Size = UDim2.new(1, 0, 0, 60); Title.Text = "Zewitt"; Title.Font = "GothamBold"
@@ -312,6 +399,7 @@ local TeleP = createTab("TELEPORT", 2)
 local VisP = createTab("VISUALS", 3)
 local FunP = createTab("FUN", 4)
 local SettingsP = createTab("SETTINGS", 5)
+local ConfigP = createTab("CONFIGS", 6)
 
 local function label(p, txt, y, sz)
     local l = Instance.new("TextLabel", p)
@@ -347,33 +435,80 @@ local function makeSlider(p, title, y, def, max, callback)
     end))
 end
 
--- [[ WELCOME SCREEN ANIMATION ]]
-local function playWelcomeAnimation()
-    if ScreenGui:FindFirstChild("ZewittWelcome") then ScreenGui.ZewittWelcome:Destroy() end
-    local WelcomeFrame = Instance.new("Frame", ScreenGui)
-    WelcomeFrame.Name = "ZewittWelcome"; WelcomeFrame.Size = UDim2.new(0, 520, 0, 420) 
-    WelcomeFrame.Position = UDim2.new(0.5, -260, 0.5, -210); WelcomeFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15) 
-    WelcomeFrame.BorderSizePixel = 0; WelcomeFrame.ZIndex = 999 
-    Instance.new("UICorner", WelcomeFrame).CornerRadius = UDim.new(0, 10)
+-- [[ YENİ NESİL İNTRO (YÜKLEME EKRANI) ]]
+local function playIntroAnimation()
+    if ScreenGui:FindFirstChild("ZewittIntro") then ScreenGui.ZewittIntro:Destroy() end
+    
+    local IntroFrame = Instance.new("Frame", ScreenGui)
+    IntroFrame.Name = "ZewittIntro"
+    IntroFrame.Size = UDim2.new(0, 400, 0, 150)
+    IntroFrame.Position = UDim2.new(0.5, -200, 0.5, -75)
+    IntroFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    IntroFrame.BorderSizePixel = 0
+    IntroFrame.ZIndex = 999
+    Instance.new("UICorner", IntroFrame).CornerRadius = UDim.new(0, 10)
+    
+    -- İntro Arkaplan Geçişi
+    local introGrad = Instance.new("UIGradient", IntroFrame)
+    introGrad.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 20, 45)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 20))
+    }
+    introGrad.Rotation = 45
 
-    local WelcomeText = Instance.new("TextLabel", WelcomeFrame)
-    WelcomeText.Size = UDim2.new(1, 0, 1, 0); WelcomeText.BackgroundTransparency = 1
-    WelcomeText.Text = "Welcome to Zewitt!"; WelcomeText.Font = Enum.Font.GothamBold 
-    WelcomeText.TextSize = 32; WelcomeText.TextColor3 = Color3.fromRGB(255, 0, 0) 
-    WelcomeText.TextTransparency = 1; WelcomeText.ZIndex = 1000 
+    local TitleLabel = Instance.new("TextLabel", IntroFrame)
+    TitleLabel.Size = UDim2.new(1, 0, 0, 50); TitleLabel.Position = UDim2.new(0, 0, 0, 15)
+    TitleLabel.BackgroundTransparency = 1; TitleLabel.Text = "ZEWITT"
+    TitleLabel.Font = Enum.Font.GothamBlack; TitleLabel.TextSize = 36
+    TitleLabel.TextColor3 = Color3.new(1, 1, 1); TitleLabel.ZIndex = 1000
 
-    local TS = game:GetService("TweenService")
-    local info = TweenInfo.new(1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local StatusLabel = Instance.new("TextLabel", IntroFrame)
+    StatusLabel.Size = UDim2.new(1, 0, 0, 20); StatusLabel.Position = UDim2.new(0, 0, 0, 75)
+    StatusLabel.BackgroundTransparency = 1; StatusLabel.Text = "Initializing..."
+    StatusLabel.Font = Enum.Font.Gotham; StatusLabel.TextSize = 12
+    StatusLabel.TextColor3 = Color3.fromRGB(180, 180, 180); StatusLabel.ZIndex = 1000
+
+    local BarBg = Instance.new("Frame", IntroFrame)
+    BarBg.Size = UDim2.new(0.8, 0, 0, 6); BarBg.Position = UDim2.new(0.1, 0, 0, 105)
+    BarBg.BackgroundColor3 = Color3.fromRGB(40, 40, 40); BarBg.BorderSizePixel = 0; BarBg.ZIndex = 1000
+    Instance.new("UICorner", BarBg).CornerRadius = UDim.new(1, 0)
+
+    local BarFill = Instance.new("Frame", BarBg)
+    BarFill.Size = UDim2.new(0, 0, 1, 0); BarFill.BackgroundColor3 = themeColor
+    BarFill.BorderSizePixel = 0; BarFill.ZIndex = 1001
+    Instance.new("UICorner", BarFill).CornerRadius = UDim.new(1, 0)
+    table.insert(_G.ThemeElements, BarFill)
+
     Main.Visible = false
-    task.wait(0.2) 
-    TS:Create(WelcomeText, info, {TextTransparency = 0}):Play()
-    task.wait(2.5) 
-    TS:Create(WelcomeText, info, {TextTransparency = 1}):Play()
-    local fadeOut = TS:Create(WelcomeFrame, info, {BackgroundTransparency = 1})
-    fadeOut:Play()
-    fadeOut.Completed:Connect(function() WelcomeFrame:Destroy() Main.Visible = true end)
+    local TS = game:GetService("TweenService")
+    
+    -- Yükleme Senaryosu
+    task.wait(0.5)
+    TS:Create(BarFill, TweenInfo.new(1, Enum.EasingStyle.Sine), {Size = UDim2.new(0.4, 0, 1, 0)}):Play()
+    StatusLabel.Text = "Loading assets..."
+    task.wait(1.2)
+    
+    TS:Create(BarFill, TweenInfo.new(1.2, Enum.EasingStyle.Sine), {Size = UDim2.new(0.8, 0, 1, 0)}):Play()
+    StatusLabel.Text = "Getting prepared..."
+    task.wait(1.5)
+    
+    TS:Create(BarFill, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {Size = UDim2.new(1, 0, 1, 0)}):Play()
+    StatusLabel.Text = "Ready!"
+    task.wait(0.6)
+
+    -- Ekrandan Yavaşça Kaybolma (Fade Out)
+    local fadeInfo = TweenInfo.new(0.8, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    TS:Create(IntroFrame, fadeInfo, {BackgroundTransparency = 1}):Play()
+    TS:Create(TitleLabel, fadeInfo, {TextTransparency = 1}):Play()
+    TS:Create(StatusLabel, fadeInfo, {TextTransparency = 1}):Play()
+    TS:Create(BarBg, fadeInfo, {BackgroundTransparency = 1}):Play()
+    TS:Create(BarFill, fadeInfo, {BackgroundTransparency = 1}):Play()
+    
+    task.wait(0.8)
+    IntroFrame:Destroy()
+    Main.Visible = true
 end
-task.spawn(playWelcomeAnimation)
+task.spawn(playIntroAnimation)
 
 -- AIMBOT SAYFASI
 local AimStatus = label(AimP, "AIMBOT: KAPALI [E]", 10, 16)
@@ -669,6 +804,191 @@ DiscordLabel.TextSize = 12; DiscordLabel.TextColor3 = themeColor
 
 table.insert(_G.ThemeElements, CreditLabel); table.insert(_G.ThemeElements, DiscordLabel)
 
+-- [[ CONFIG (PROFIL) SAYFASI ]]
+label(ConfigP, "YENİ CONFIG OLUŞTUR", 10, 16)
+
+local ConfigNameIn = Instance.new("TextBox", ConfigP)
+ConfigNameIn.Size = UDim2.new(0.5, 0, 0, 30)
+ConfigNameIn.Position = UDim2.new(0.1, 0, 0, 45)
+ConfigNameIn.PlaceholderText = "Örn: Legit, Rage, Chill"
+ConfigNameIn.Text = ""
+ConfigNameIn.Font = "GothamBold"
+ConfigNameIn.TextSize = 12
+ConfigNameIn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+ConfigNameIn.TextColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", ConfigNameIn)
+
+local SaveConfigBtn = Instance.new("TextButton", ConfigP)
+SaveConfigBtn.Size = UDim2.new(0.28, 0, 0, 30)
+SaveConfigBtn.Position = UDim2.new(0.62, 0, 0, 45)
+SaveConfigBtn.Text = "KAYDET"
+SaveConfigBtn.Font = "GothamBold"
+SaveConfigBtn.TextSize = 12
+SaveConfigBtn.BackgroundColor3 = Color3.fromRGB(45, 150, 45)
+SaveConfigBtn.TextColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", SaveConfigBtn)
+
+label(ConfigP, "KAYITLI CONFIGLER", 90, 16)
+
+local ConfigListFrame = Instance.new("ScrollingFrame", ConfigP)
+ConfigListFrame.Size = UDim2.new(0.8, 0, 0, 200)
+ConfigListFrame.Position = UDim2.new(0.1, 0, 0, 125)
+ConfigListFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+ConfigListFrame.BorderSizePixel = 0
+ConfigListFrame.ScrollBarThickness = 4
+Instance.new("UICorner", ConfigListFrame)
+
+local CfgLayout = Instance.new("UIListLayout", ConfigListFrame)
+CfgLayout.SortOrder = Enum.SortOrder.LayoutOrder
+CfgLayout.Padding = UDim.new(0, 5)
+
+local function refreshConfigs()
+    for _, v in pairs(ConfigListFrame:GetChildren()) do
+        if v:IsA("Frame") then v:Destroy() end
+    end
+    
+    if not isfolder(folderName) then makefolder(folderName) end
+    
+    local ySize = 0
+    -- Executor'ın dosya okuma sistemini güvenli şekilde (pcall) kullanarak klasörü tarıyoruz
+    local success, files = pcall(function() return listfiles(folderName) end)
+    
+    if success and files then
+        for _, file in pairs(files) do
+            -- Sadece .json dosyalarını al ve isimdeki klasör yollarını temizle
+            if file:sub(-5) == ".json" and file ~= folderName .. "/settings.json" then
+                local shortName = file:match("([^/\\]+)%.json$") or "Bilinmeyen"
+                
+                local ItemFrame = Instance.new("Frame", ConfigListFrame)
+                ItemFrame.Size = UDim2.new(1, -10, 0, 30)
+                ItemFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+                Instance.new("UICorner", ItemFrame)
+
+                local NameLabel = Instance.new("TextLabel", ItemFrame)
+                NameLabel.Size = UDim2.new(0.55, 0, 1, 0)
+                NameLabel.Position = UDim2.new(0.05, 0, 0, 0)
+                NameLabel.BackgroundTransparency = 1
+                NameLabel.Text = shortName
+                NameLabel.Font = "GothamBold"
+                NameLabel.TextSize = 12
+                NameLabel.TextColor3 = Color3.new(1, 1, 1)
+                NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+                local LoadBtn = Instance.new("TextButton", ItemFrame)
+                LoadBtn.Size = UDim2.new(0.25, 0, 0.8, 0)
+                LoadBtn.Position = UDim2.new(0.6, 0, 0.1, 0)
+                LoadBtn.Text = "YÜKLE"
+                LoadBtn.Font = "GothamBold"
+                LoadBtn.TextSize = 10
+                LoadBtn.BackgroundColor3 = Color3.fromRGB(30, 100, 150)
+                LoadBtn.TextColor3 = Color3.new(1, 1, 1)
+                Instance.new("UICorner", LoadBtn)
+
+                local DelBtn = Instance.new("TextButton", ItemFrame)
+                DelBtn.Size = UDim2.new(0.1, 0, 0.8, 0)
+                DelBtn.Position = UDim2.new(0.88, 0, 0.1, 0)
+                DelBtn.Text = "X"
+                DelBtn.Font = "GothamBold"
+                DelBtn.TextSize = 12
+                DelBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
+                DelBtn.TextColor3 = Color3.new(1, 1, 1)
+                Instance.new("UICorner", DelBtn)
+
+                LoadBtn.MouseButton1Click:Connect(function()
+                    local readSuccess, result = pcall(function() return HttpService:JSONDecode(readfile(file)) end)
+                    if readSuccess and result then
+                        -- 1. Tema Yükleme
+                        if result.Theme then
+                            themeR = result.Theme.R or 255; themeG = result.Theme.G or 0; themeB = result.Theme.B or 0
+                            UpdateThemeColor()
+                        end
+                        
+                        -- 2. Sayısal Değerleri Yükleme
+                        if result.Fov then fovRadius = result.Fov end
+                        if result.Speed then SpeedIn.Text = tostring(result.Speed) end
+                        if result.Jump then JumpIn.Text = tostring(result.Jump) end
+                        if result.Dash then DashIn.Text = tostring(result.Dash) end
+                        if result.SpinSpeed then spinSpeed = result.SpinSpeed end
+                        if result.FreeCamSpeed then freeCamSpeed = result.FreeCamSpeed end
+                        
+                        -- 3. ESP ve Görsel Ayarları Yükleme
+                        if result.EspDetails then
+                            espNameOn = result.EspDetails.Name; espDistOn = result.EspDetails.Dist; espBarOn = result.EspDetails.Bar
+                            EspNameBtn.Text = "İSİM GÖSTER: " .. (espNameOn and "AÇIK" or "KAPALI")
+                            EspNameBtn.TextColor3 = espNameOn and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
+                            EspDistBtn.Text = "MESAFE GÖSTER: " .. (espDistOn and "AÇIK" or "KAPALI")
+                            EspDistBtn.TextColor3 = espDistOn and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
+                            EspBarBtn.Text = "CAN BARI GÖSTER: " .. (espBarOn and "AÇIK" or "KAPALI")
+                            EspBarBtn.TextColor3 = espBarOn and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
+                        end
+                        
+                        if result.Visuals then
+                            rainbowOn = result.Visuals.Rainbow; tracerOn = result.Visuals.Tracer; fullBrightOn = result.Visuals.FullBright
+                            RainBtn.Text = "RAINBOW ESP: " .. (rainbowOn and "AÇIK" or "KAPALI")
+                            RainBtn.TextColor3 = rainbowOn and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
+                            TraceBtn.Text = "ÇİZGİLER: " .. (tracerOn and "AÇIK" or "KAPALI")
+                            TraceBtn.TextColor3 = tracerOn and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
+                            FBBtn.Text = "FULLBRIGHT: " .. (fullBrightOn and "AÇIK" or "KAPALI")
+                            FBBtn.TextColor3 = fullBrightOn and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
+                        end
+                        
+                        -- 4. Tuş Atamalarını Yükleme
+                        if result.Keys then
+                            for action, keyName in pairs(result.Keys) do
+                                if Keybinds[action] and Enum.KeyCode[keyName] then
+                                    Keybinds[action] = Enum.KeyCode[keyName]
+                                end
+                            end
+                        end
+                        
+ -- Bildirim ver
+                        if notify then notify("CONFIG YÜKLENDİ", shortName .. " başarıyla uygulandı!") end
+                    end
+                end) -- İŞTE KODU BOZAN EKSİK KISIM BURASIYDI!
+
+                DelBtn.MouseButton1Click:Connect(function()
+                    pcall(function() delfile(file) end)
+                    refreshConfigs()
+                    if notify then notify("CONFIG", shortName .. " silindi!") end
+                end)
+
+                ySize = ySize + 35
+            end
+        end
+    end
+    ConfigListFrame.CanvasSize = UDim2.new(0, 0, 0, ySize)
+end
+
+SaveConfigBtn.MouseButton1Click:Connect(function()
+    local cName = ConfigNameIn.Text
+    if cName == "" then cName = "Yeni_Config" end
+    
+    local path = folderName .. "/" .. cName .. ".json"
+    local data = {
+        Theme = {R = themeR, G = themeG, B = themeB},
+        Fov = fovRadius,
+        Speed = tonumber(SpeedIn.Text) or 5,
+        Jump = tonumber(JumpIn.Text) or 80,
+        Dash = tonumber(DashIn.Text) or 15,
+        SpinSpeed = spinSpeed,
+        FreeCamSpeed = freeCamSpeed,
+        EspDetails = {Name = espNameOn, Dist = espDistOn, Bar = espBarOn},
+        Visuals = {Rainbow = rainbowOn, Tracer = tracerOn, FullBright = fullBrightOn},
+        Keys = {}
+    }
+    for action, key in pairs(Keybinds) do
+        data.Keys[action] = key.Name
+    end
+    
+    pcall(function() writefile(path, HttpService:JSONEncode(data)) end)
+    ConfigNameIn.Text = ""
+    refreshConfigs()
+    if notify then notify("CONFIG", cName .. " başarıyla kaydedildi!") end
+end)
+
+-- Menü açıldığında configleri listele
+refreshConfigs()
+
 -- [6] RENDER & SPINBOT & FREECAM LOGIC
 table.insert(_G.ZewittCons, RS.RenderStepped:Connect(function()
     
@@ -960,7 +1280,7 @@ table.insert(_G.ZewittCons, UIS.InputBegan:Connect(function(i, g)
     end
 
     if i.KeyCode == Enum.KeyCode.RightShift then totalShutdown() return end
-    if i.KeyCode == Enum.KeyCode.RightControl then Main.Visible = not Main.Visible return end
+	if i.KeyCode == Enum.KeyCode.RightControl then Main.Visible = not Main.Visible return end
     if g then return end 
     
     if i.KeyCode == Keybinds.Aimbot then 
