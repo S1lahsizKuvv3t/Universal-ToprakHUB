@@ -672,6 +672,19 @@ end)
 local FreeCamStatus = label(TeleP, "FREECAM: KAPALI [é]", 395, 16)
 makeSlider(TeleP, "FREECAM HIZI", 425, 2, 10, function(v) freeCamSpeed = v end)
 
+-- CLICK TP (CTRL + SOL TIK) ARAYÜZÜ
+local clickTpOn = false
+local ClickTpBtn = Instance.new("TextButton", TeleP)
+ClickTpBtn.Size = UDim2.new(0.8,0,0,30); ClickTpBtn.Position = UDim2.new(0.1,0,0,475)
+ClickTpBtn.Text = "CLICK TP (CTRL+KLİK): KAPALI"
+ClickTpBtn.Font = "GothamBold"; ClickTpBtn.BackgroundColor3 = Color3.fromRGB(35,35,35); ClickTpBtn.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", ClickTpBtn)
+
+ClickTpBtn.MouseButton1Click:Connect(function()
+    clickTpOn = not clickTpOn
+    ClickTpBtn.Text = "CLICK TP (CTRL+KLİK): " .. (clickTpOn and "AÇIK" or "KAPALI")
+    ClickTpBtn.TextColor3 = clickTpOn and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
+end)
 -- VISUALS SAYFASI
 makeSlider(VisP, "ESP RENGİ (KIRMIZI)", 5, rV, 255, function(v) rV = v end)
 makeSlider(VisP, "ESP RENGİ (YEŞİL)", 45, gV, 255, function(v) gV = v end)
@@ -1320,6 +1333,19 @@ table.insert(_G.ZewittCons, UIS.InputBegan:Connect(function(i, g)
         aiming = true 
         if currentTargetPart == "Random" then
             if math.random(1, 3) == 1 then currentRandomTarget = "Head" else currentRandomTarget = "Body" end
+        end
+    end
+
+	-- YENİ: CLICK TP MANTIĞI
+    if clickTpOn and i.UserInputType == Enum.UserInputType.MouseButton1 then
+        -- Hem Sağ CTRL hem de Sol CTRL desteklenir
+        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) or UIS:IsKeyDown(Enum.KeyCode.RightControl) then
+            local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if hrp and mouse.Hit then
+                -- Karakterin yere saplanmaması için Y eksenine (yukarıya doğru) +3 ekliyoruz
+                hrp.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0))
+                if notify then notify("TELEPORT", "Tıklanan yere ışınlanıldı!") end
+            end
         end
     end
 end))
