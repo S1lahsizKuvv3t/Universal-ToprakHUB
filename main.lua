@@ -109,7 +109,8 @@ local Keybinds = {
     Jump = Enum.KeyCode.X,
     ESP = Enum.KeyCode.V,
     FreeCam = Enum.KeyCode.Backquote,
-	Dash = Enum.KeyCode.C
+	Dash = Enum.KeyCode.C,
+	AutoClick = Enum.KeyCode.LessThan
 }
 local recordingAction = nil
 local recordingButton = nil
@@ -118,45 +119,6 @@ local targetModes = {"Head", "Body", "Random"}
 local currentTargetIndex = 1
 local currentTargetPart = "Head"
 local currentRandomTarget = "Body"
--- [[ BİLDİRİM SİSTEMİ (NOTIFICATIONS) ]]
-local function notify(title, text)
-    local NotifyFrame = Instance.new("Frame", ScreenGui)
-    NotifyFrame.Size = UDim2.new(0, 220, 0, 60)
-    NotifyFrame.Position = UDim2.new(1, 30, 1, -50) -- Ekranın dışından başlar (sağdan)
-    NotifyFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    NotifyFrame.BorderSizePixel = 0
-    NotifyFrame.ZIndex = 1000
-    Instance.new("UICorner", NotifyFrame).CornerRadius = UDim.new(0, 8)
-    
-    local grad = Instance.new("UIGradient", NotifyFrame)
-    grad.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, themeColor),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 15))
-    }
-    grad.Rotation = 45
-
-    local nTitle = Instance.new("TextLabel", NotifyFrame)
-    nTitle.Size = UDim2.new(1, -10, 0, 25); nTitle.Position = UDim2.new(0, 10, 0, 5)
-    nTitle.BackgroundTransparency = 1; nTitle.Text = title; nTitle.Font = "GothamBold"
-    nTitle.TextSize = 14; nTitle.TextColor3 = Color3.new(1, 1, 1); nTitle.TextXAlignment = "Left"
-
-    local nText = Instance.new("TextLabel", NotifyFrame)
-    nText.Size = UDim2.new(1, -10, 0, 20); nText.Position = UDim2.new(0, 10, 0, 30)
-    nText.BackgroundTransparency = 1; nText.Text = text; nText.Font = "Gotham"
-    nText.TextSize = 12; nText.TextColor3 = Color3.fromRGB(200, 200, 200); nText.TextXAlignment = "Left"
-
-    -- Animasyonlar (TweenService)
-    local TS = game:GetService("TweenService")
-    NotifyFrame:TweenPosition(UDim2.new(1, -230, 1, -50), "Out", "Quint", 0.5, true)
-    
-    task.wait(3) -- 3 saniye ekranda kalır
-    
-    local fadeOut = TS:Create(NotifyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(1, 30, 1, -50), BackgroundTransparency = 1})
-    TS:Create(nTitle, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
-    TS:Create(nText, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
-    fadeOut:Play()
-    fadeOut.Completed:Connect(function() NotifyFrame:Destroy() end)
-end
 
 local function SaveConfig()
     if not isfolder(folderName) then makefolder(folderName) end
@@ -361,11 +323,13 @@ MinimizeBtn.MouseButton1Click:Connect(function()
         preMinimizeSize = Main.Size
         MinimizeBtn.Text = "+"
         Container.Visible = false; ResizeHandle.Visible = false
+        ProfileFrame.Visible = false -- YENİ: Küçülünce avatarı gizle
         for _, v in pairs(SideBar:GetChildren()) do if v:IsA("TextButton") then v.Visible = false end end
         Main.Size = UDim2.new(0, preMinimizeSize.X.Offset, 0, 60)
     else
         MinimizeBtn.Text = "-"
         Container.Visible = true; ResizeHandle.Visible = true
+        ProfileFrame.Visible = true -- YENİ: Büyüyünce avatarı geri getir
         for _, v in pairs(SideBar:GetChildren()) do if v:IsA("TextButton") then v.Visible = true end end
         Main.Size = preMinimizeSize
     end
@@ -525,6 +489,18 @@ TargetBtn.MouseButton1Click:Connect(function()
     TargetBtn.Text = "HEDEF: " .. currentTargetPart
 end)
 makeSlider(AimP, "FOV BOYUTU", 85, 120, 600, function(v) fovRadius = v end)
+local wallCheckOn = false
+local WallCheckBtn = Instance.new("TextButton", AimP)
+WallCheckBtn.Size = UDim2.new(0.8, 0, 0, 30); WallCheckBtn.Position = UDim2.new(0.1, 0, 0, 125)
+WallCheckBtn.Text = "WALL-CHECK: KAPALI"; WallCheckBtn.Font = "GothamBold"; WallCheckBtn.TextSize = 14
+WallCheckBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35); WallCheckBtn.TextColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", WallCheckBtn); table.insert(_G.ThemeElements, WallCheckBtn)
+
+WallCheckBtn.MouseButton1Click:Connect(function()
+    wallCheckOn = not wallCheckOn
+    WallCheckBtn.Text = "WALL-CHECK: " .. (wallCheckOn and "AÇIK" or "KAPALI")
+    WallCheckBtn.TextColor3 = wallCheckOn and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
+end)
 
 -- MOVEMENT SAYFASI
 local SpeedStatus = label(MoveP, "HIZ: KAPALI [Q]", 10, 16)
@@ -743,6 +719,87 @@ IYBtn.Text = "INFINITE YIELD AÇ"; IYBtn.Font = "GothamBold"; IYBtn.TextSize = 1
 IYBtn.BackgroundColor3 = Color3.fromRGB(130,30,130); IYBtn.TextColor3 = Color3.new(1,1,1)
 Instance.new("UICorner", IYBtn)
 
+-- [[ AUTO-CLICKER SİSTEMİ (GARANTİLİ VIM VERSİYONU) ]]
+local autoClickOn = false
+local autoClickCps = 10
+local isCountingDown = false
+local VIM = game:GetService("VirtualInputManager") -- Bütün executorlarda çalışan efsanevi servis!
+
+local ACBtn = Instance.new("TextButton", FunP)
+ACBtn.Size = UDim2.new(0.8, 0, 0, 40)
+ACBtn.Position = UDim2.new(0.1, 0, 0, 200)
+ACBtn.Text = "AUTO CLICKER: KAPALI"
+ACBtn.Font = "GothamBold"
+ACBtn.TextSize = 14
+ACBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+ACBtn.TextColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", ACBtn)
+
+-- Ortak Aç-Kapa Fonksiyonu (Hem buton hem de klavye tuşu için)
+_G.ToggleAutoClick = function()
+    if isCountingDown then return end
+
+    if not autoClickOn then
+        isCountingDown = true
+        ACBtn.Text = "BAŞLIYOR... 2"
+        ACBtn.TextColor3 = Color3.fromRGB(255, 255, 0)
+        task.wait(1)
+        
+        ACBtn.Text = "BAŞLIYOR... 1"
+        task.wait(1)
+        
+        autoClickOn = true
+        isCountingDown = false
+        ACBtn.Text = "AUTO CLICKER: AÇIK"
+        ACBtn.TextColor3 = Color3.new(0, 1, 0)
+    else
+        autoClickOn = false
+        ACBtn.Text = "AUTO CLICKER: KAPALI"
+        ACBtn.TextColor3 = Color3.new(1, 1, 1)
+    end
+end
+
+ACBtn.MouseButton1Click:Connect(_G.ToggleAutoClick)
+
+-- Hız Ayarı İçin Metin Kutusu (TextBox)
+label(FunP, "TIKLAMA HIZI (CPS)", 255, 14)
+
+local ACIn = Instance.new("TextBox", FunP)
+ACIn.Size = UDim2.new(0.8, 0, 0, 35)
+ACIn.Position = UDim2.new(0.1, 0, 0, 290)
+ACIn.Text = tostring(autoClickCps)
+ACIn.Font = "GothamBold"
+ACIn.TextSize = 12
+ACIn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+ACIn.TextColor3 = Color3.new(1, 1, 1)
+ACIn.PlaceholderText = "Saniyedeki tıklama sayısı..."
+Instance.new("UICorner", ACIn)
+
+ACIn.FocusLost:Connect(function()
+    local val = tonumber(ACIn.Text)
+    if val and val > 0 then
+        autoClickCps = val
+    else
+        ACIn.Text = tostring(autoClickCps)
+    end
+end)
+
+-- Arka Planda Çalışan Garantili Tıklama Döngüsü
+task.spawn(function()
+    while true do
+        task.wait()
+        if autoClickOn then
+            pcall(function() 
+                -- mouse1click() yerine her executor'da çalışan Roblox Native sistem
+                VIM:SendMouseButtonEvent(mouse.X, mouse.Y + 36, 0, true, game, 1) -- Sol tıka bas
+                task.wait()
+                VIM:SendMouseButtonEvent(mouse.X, mouse.Y + 36, 0, false, game, 1) -- Sol tıkı bırak
+            end)
+            task.wait(1 / autoClickCps)
+        end
+    end
+end)
+
 -- [[ SETTINGS SAYFASI ]]
 label(SettingsP, "SİSTEM AYARLARI", 10, 16)
 
@@ -776,6 +833,7 @@ createKeybindUI(SettingsP, "Zıplama Tuşu", 240, "Jump")
 createKeybindUI(SettingsP, "ESP Tuşu", 275, "ESP")
 createKeybindUI(SettingsP, "Freecam Tuşu", 310, "FreeCam")
 createKeybindUI(SettingsP, "Dash Tuşu", 345, "Dash") -- YENİ EKLENDİ
+createKeybindUI(SettingsP, "Auto-Click Tuşu", 380, "AutoClick")
 
 local function UpdateThemeColor()
     themeColor = Color3.fromRGB(themeR, themeG, themeB)
@@ -793,25 +851,52 @@ table.insert(_G.ThemeElements, Title)
 table.insert(_G.ThemeElements, ResizeHandle)
 table.insert(_G.ThemeElements, MinimizeBtn)
 
-label(SettingsP, "TEMA RENGİ AYARI", 390, 16) -- Y koordinatları güncellendi
-makeSlider(SettingsP, "TEMA (KIRMIZI)", 420, themeR, 255, function(v) themeR = v UpdateThemeColor() SaveConfig() end)
-makeSlider(SettingsP, "TEMA (YEŞİL)", 460, themeG, 255, function(v) themeG = v UpdateThemeColor() SaveConfig() end)
-makeSlider(SettingsP, "TEMA (MAVİ)", 500, themeB, 255, function(v) themeB = v UpdateThemeColor() SaveConfig() end)
+-- TEMA VE ALT BÖLÜM KOORDİNAT GÜNCELLEMESİ (SİMETRİK)
+label(SettingsP, "TEMA RENGİ AYARI", 425, 16) 
 
-makeSlider(SettingsP, "MENÜ SAYDAMLIĞI", 540, 0, 100, function(v)
-    local transparency = v / 100
-    Main.BackgroundTransparency = transparency
-    SideBar.BackgroundTransparency = transparency
-    PlayerListFrame.BackgroundTransparency = transparency == 0 and 0.1 or transparency
+makeSlider(SettingsP, "TEMA (KIRMIZI)", 455, themeR, 255, function(v) 
+    themeR = v UpdateThemeColor() SaveConfig() 
 end)
 
+makeSlider(SettingsP, "TEMA (YEŞİL)", 495, themeG, 255, function(v) 
+    themeG = v UpdateThemeColor() SaveConfig() 
+end)
+
+makeSlider(SettingsP, "TEMA (MAVİ)", 535, themeB, 255, function(v) 
+    themeB = v UpdateThemeColor() SaveConfig() 
+end)
+
+makeSlider(SettingsP, "MENÜ SAYDAMLIĞI", 575, 0, 100, function(v)
+    local t = v / 100
+    Main.BackgroundTransparency = t
+    for _, obj in pairs(Main:GetDescendants()) do
+        if obj:IsA("GuiObject") then
+            if not obj:GetAttribute("OrigBg") then obj:SetAttribute("OrigBg", obj.BackgroundTransparency) end
+            obj.BackgroundTransparency = math.max(obj:GetAttribute("OrigBg"), t)
+        end
+        if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+            if not obj:GetAttribute("OrigTxt") then obj:SetAttribute("OrigTxt", obj.TextTransparency) end
+            obj.TextTransparency = math.max(obj:GetAttribute("OrigTxt"), t)
+        end
+        if obj:IsA("ImageLabel") then
+            if not obj:GetAttribute("OrigImg") then obj:SetAttribute("OrigImg", obj.ImageTransparency) end
+            obj.ImageTransparency = math.max(obj:GetAttribute("OrigImg"), t)
+        end
+        if obj:IsA("UIStroke") then
+            if not obj:GetAttribute("OrigStr") then obj:SetAttribute("OrigStr", obj.Transparency) end
+            obj.Transparency = math.max(obj:GetAttribute("OrigStr"), t)
+        end
+    end
+end)
+
+-- Alt Bilgiler (Footers)
 local CreditLabel = Instance.new("TextLabel", SettingsP)
-CreditLabel.Size = UDim2.new(1, 0, 0, 20); CreditLabel.Position = UDim2.new(0, 0, 0, 585) 
+CreditLabel.Size = UDim2.new(1, 0, 0, 20); CreditLabel.Position = UDim2.new(0, 0, 0, 625) 
 CreditLabel.BackgroundTransparency = 1; CreditLabel.Text = "by Yiwit"; CreditLabel.Font = "GothamBold"
 CreditLabel.TextSize = 14; CreditLabel.TextColor3 = themeColor
 
 local DiscordLabel = Instance.new("TextLabel", SettingsP)
-DiscordLabel.Size = UDim2.new(1, 0, 0, 20); DiscordLabel.Position = UDim2.new(0, 0, 0, 605)
+DiscordLabel.Size = UDim2.new(1, 0, 0, 20); DiscordLabel.Position = UDim2.new(0, 0, 0, 645)
 DiscordLabel.BackgroundTransparency = 1; DiscordLabel.Text = "discord for help: yasliplanet._."; DiscordLabel.Font = "Gotham"
 DiscordLabel.TextSize = 12; DiscordLabel.TextColor3 = themeColor
 
@@ -955,15 +1040,13 @@ local function refreshConfigs()
                         end
                         
  -- Bildirim ver
-                        if notify then notify("CONFIG YÜKLENDİ", shortName .. " başarıyla uygulandı!") end
                     end
                 end) -- İŞTE KODU BOZAN EKSİK KISIM BURASIYDI!
 
                 DelBtn.MouseButton1Click:Connect(function()
                     pcall(function() delfile(file) end)
                     refreshConfigs()
-                    if notify then notify("CONFIG", shortName .. " silindi!") end
-                end)
+	               end)
 
                 ySize = ySize + 35
             end
@@ -996,7 +1079,6 @@ SaveConfigBtn.MouseButton1Click:Connect(function()
     pcall(function() writefile(path, HttpService:JSONEncode(data)) end)
     ConfigNameIn.Text = ""
     refreshConfigs()
-    if notify then notify("CONFIG", cName .. " başarıyla kaydedildi!") end
 end)
 
 -- Menü açıldığında configleri listele
@@ -1014,10 +1096,18 @@ table.insert(_G.ZewittCons, RS.RenderStepped:Connect(function()
         Lighting.Brightness = 2; Lighting.ClockTime = 14; Lighting.GlobalShadows = false 
     end
     
+    -- FARENİN KUSURSUZ KONUMU (TopBar hatasını yok eder)
+    local mLoc = UIS:GetMouseLocation()
+
     if aimbotOn then
-        FOVCircle.Visible = true; FOVCircle.Position = Vector2.new(mouse.X, mouse.Y + 36)
-        FOVCircle.Radius = fovRadius; FOVCircle.Color = themeColor 
-    else FOVCircle.Visible = false end
+        FOVCircle.Visible = true
+        FOVCircle.Position = mLoc
+        FOVCircle.Radius = fovRadius
+        FOVCircle.Color = themeColor 
+        FOVCircle.Filled = false
+    else 
+        FOVCircle.Visible = false 
+    end
 
     if freeCamOn then
         camera.CameraType = Enum.CameraType.Scriptable
@@ -1077,7 +1167,6 @@ table.insert(_G.ZewittCons, RS.RenderStepped:Connect(function()
                 local pos, on = camera:WorldToViewportPoint(hrp.Position + Vector3.new(0, 4.0, 0))
                 
                 if on then 
-                    -- Toggle Sistemine Göre Yazı Formatı
                     local textStr = ""
                     if espNameOn then textStr = v.Name end
                     if espDistOn then
@@ -1090,7 +1179,6 @@ table.insert(_G.ZewittCons, RS.RenderStepped:Connect(function()
                     nl.Color = currentEspColor
                     nl.Visible = (textStr ~= "") 
                     
-                    -- Toggle Sistemine Göre Can Barı
                     if espBarOn then
                         local barWidth = 40
                         local barHeight = 4
@@ -1135,7 +1223,6 @@ table.insert(_G.ZewittCons, RS.RenderStepped:Connect(function()
                 end
             elseif line then line.Visible = false end
         else
-            -- Adam öldü veya çıktı, çizimleri gizle
             if _G.Lines[v.Name] then _G.Lines[v.Name].Visible = false end
             if _G.Names[v.Name] then _G.Names[v.Name].Visible = false end
             if _G.HpBgs[v.Name] then _G.HpBgs[v.Name].Visible = false end
@@ -1143,6 +1230,7 @@ table.insert(_G.ZewittCons, RS.RenderStepped:Connect(function()
         end
     end
 
+    -- TEK VE KUSURSUZ AIMBOT BEYNİ (Wall-Check ve Smooth Aim Dahil)
     if aimbotOn and aiming and not freeCamOn then
         local t, d = nil, fovRadius
         for _, v in pairs(Players:GetPlayers()) do
@@ -1161,13 +1249,29 @@ table.insert(_G.ZewittCons, RS.RenderStepped:Connect(function()
                 if partToAim then
                     local pos, on = camera:WorldToViewportPoint(partToAim.Position)
                     if on then
-                        local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(mouse.X, mouse.Y)).Magnitude
-                        if dist < d then d = dist; t = partToAim end
+                        local isVisible = true
+                        
+                        if wallCheckOn then
+                            local rayParams = RaycastParams.new()
+                            rayParams.FilterType = Enum.RaycastFilterType.Exclude
+                            rayParams.FilterDescendantsInstances = {player.Character, v.Character} 
+                            
+                            local rayResult = workspace:Raycast(camera.CFrame.Position, partToAim.Position - camera.CFrame.Position, rayParams)
+                            if rayResult and rayResult.Instance then isVisible = false end
+                        end
+
+                        if isVisible then
+                            local dist = (Vector2.new(pos.X, pos.Y) - mLoc).Magnitude
+                            if dist < d then d = dist; t = partToAim end
+                        end
                     end
                 end
             end
         end
-        if t then camera.CFrame = CFrame.new(camera.CFrame.Position, t.Position) end
+        if t then 
+            local targetCFrame = CFrame.new(camera.CFrame.Position, t.Position)
+            camera.CFrame = camera.CFrame:Lerp(targetCFrame, 0.5)
+        end
     end
 end))
 
@@ -1293,9 +1397,29 @@ table.insert(_G.ZewittCons, UIS.InputBegan:Connect(function(i, g)
     end
 
     if i.KeyCode == Enum.KeyCode.RightShift then totalShutdown() return end
-	if i.KeyCode == Enum.KeyCode.RightControl then Main.Visible = not Main.Visible return end
+    if i.KeyCode == Enum.KeyCode.RightControl then Main.Visible = not Main.Visible return end
+    
+    -- SAĞ TIK (AİMBOT HEDEFLEMESİ)
+    if i.UserInputType == Enum.UserInputType.MouseButton2 then 
+        aiming = true 
+        if currentTargetPart == "Random" then
+            if math.random(1, 3) == 1 then currentRandomTarget = "Head" else currentRandomTarget = "Body" end
+        end
+    end
+
+    -- CLICK TP MANTIĞI (CTRL + SOL TIK)
+    if clickTpOn and i.UserInputType == Enum.UserInputType.MouseButton1 then
+        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) or UIS:IsKeyDown(Enum.KeyCode.RightControl) then
+            local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if hrp and mouse.Hit then
+                hrp.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0))
+            end
+        end
+    end
+
     if g then return end 
     
+    -- KLAVYE KISAYOLLARI ZİNCİRİ
     if i.KeyCode == Keybinds.Aimbot then 
         aimbotOn = not aimbotOn; AimStatus.Text = "AIMBOT: "..(aimbotOn and "AKTİF" or "KAPALI")
         AimStatus.TextColor3 = aimbotOn and Color3.new(0,1,0) or Color3.new(1,0,0)
@@ -1308,7 +1432,7 @@ table.insert(_G.ZewittCons, UIS.InputBegan:Connect(function(i, g)
         local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
         if hum then hum.UseJumpPower = true; hum.JumpPower = jumpOn and (tonumber(JumpIn.Text) or 50) or 50 end
     elseif i.KeyCode == Keybinds.ESP then 
-        espOn = not espOn -- Ana ESP açma kapama tuşu (V)
+        espOn = not espOn 
     elseif i.KeyCode == Keybinds.FreeCam then 
         freeCamOn = not freeCamOn
         if freeCamOn then
@@ -1321,31 +1445,17 @@ table.insert(_G.ZewittCons, UIS.InputBegan:Connect(function(i, g)
             end
         end
     elseif i.KeyCode == Keybinds.Dash then 
-        -- YENİ: DASH İŞLEMİ (Anında ileri atılma)
         local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
         if hrp then
             local dashDist = tonumber(DashIn.Text) or 15
             hrp.CFrame = hrp.CFrame + (hrp.CFrame.LookVector * dashDist)
         end
-    end
-    
-    if i.UserInputType == Enum.UserInputType.MouseButton2 then 
-        aiming = true 
-        if currentTargetPart == "Random" then
-            if math.random(1, 3) == 1 then currentRandomTarget = "Head" else currentRandomTarget = "Body" end
-        end
-    end
-
-	-- YENİ: CLICK TP MANTIĞI
-    if clickTpOn and i.UserInputType == Enum.UserInputType.MouseButton1 then
-        -- Hem Sağ CTRL hem de Sol CTRL desteklenir
-        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) or UIS:IsKeyDown(Enum.KeyCode.RightControl) then
-            local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-            if hrp and mouse.Hit then
-                -- Karakterin yere saplanmaması için Y eksenine (yukarıya doğru) +3 ekliyoruz
-                hrp.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0))
-                if notify then notify("TELEPORT", "Tıklanan yere ışınlanıldı!") end
-            end
+	elseif i.KeyCode == Keybinds.AutoClick then 
+        -- İster butona tıkla ister kısayol tuşuna bas, 2 saniyelik güvenli geri sayım başlar!
+        if _G.ToggleAutoClick then _G.ToggleAutoClick() end
+        if ACBtn then
+            ACBtn.Text = "AUTO CLICKER: " .. (autoClickOn and "AÇIK" or "KAPALI")
+            ACBtn.TextColor3 = autoClickOn and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
         end
     end
 end))
