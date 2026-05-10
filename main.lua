@@ -216,6 +216,16 @@ Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 Main.Active = true
 Main.ClipsDescendants = true 
 
+-- [[ ZEWITT LOGO ENTEGRASYONU (SIDEBAR VERSİYONU) ]]
+local ZewittLogo = Instance.new("ImageLabel", SideBar) -- Main yerine SideBar'a bağladık!
+ZewittLogo.Name = "ZewittLogo"
+ZewittLogo.Size = UDim2.new(1, 0, 0, 60) -- Tam olarak sildiğimiz eski yazının boyutunu verdik
+ZewittLogo.Position = UDim2.new(0, 0, 0, 5) -- SideBar'ın en üstüne hizaladık
+ZewittLogo.BackgroundTransparency = 1 
+ZewittLogo.ZIndex = 10 -- Ne olur ne olmaz diye diğer her şeyin en üstüne (öne) çektik
+ZewittLogo.Image = "rbxthumb://type=Asset&id=107714424064015&w=150&h=150" 
+ZewittLogo.ScaleType = Enum.ScaleType.Fit
+
 local dragging, dragInput, dragStart, startPos
 
 local function updateDrag(input)
@@ -267,10 +277,6 @@ SideGradient.Color = ColorSequence.new{
     ColorSequenceKeypoint.new(1, Color3.fromRGB(18, 20, 30))
 }
 SideGradient.Rotation = 45
-
-local Title = Instance.new("TextLabel", SideBar)
-Title.Size = UDim2.new(1, 0, 0, 60); Title.Text = "Zewitt"; Title.Font = "GothamBold"
-Title.TextSize = 22; Title.BackgroundTransparency = 1; Title.TextColor3 = themeColor
 
 local ProfileFrame = Instance.new("Frame", SideBar)
 ProfileFrame.Size = UDim2.new(1, 0, 0, 50); ProfileFrame.Position = UDim2.new(0, 0, 1, -50); ProfileFrame.BackgroundTransparency = 1
