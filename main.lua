@@ -1441,13 +1441,27 @@ table.insert(_G.ZewittCons, UIS.InputBegan:Connect(function(i, g)
         espOn = not espOn 
     elseif i.KeyCode == Keybinds.FreeCam then 
         freeCamOn = not freeCamOn
+        
+        -- Karakterin HRP'sini (HumanoidRootPart) tanımla
+        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+
         if freeCamOn then
             local x, y, z = camera.CFrame:ToEulerAnglesYXZ()
             camRotX, camRotY = x, y
+            
+            -- Freecam açıldığında karakteri olduğu yere sabitle
+            if hrp then
+                hrp.Anchored = true
+            end
         else
             camera.CameraType = Enum.CameraType.Custom
             if player.Character and player.Character:FindFirstChild("Humanoid") then
                 camera.CameraSubject = player.Character.Humanoid
+            end
+            
+            -- Freecam kapandığında karakterin hareketini tekrar serbest bırak
+            if hrp then
+                hrp.Anchored = false
             end
         end
     elseif i.KeyCode == Keybinds.Dash then 
